@@ -604,6 +604,7 @@ namespace MaterialEditorAPI
                 var materialItem = new ItemInfo(ItemInfo.RowItemType.Material, "Material")
                 {
                     MaterialName = materialName,
+                    MaterialOutput = () => MaterialOutput(data, mat, go),
                     MaterialOnCopy = () => MaterialCopyEdits(data, mat, go),
                     MaterialOnPaste = () =>
                     {
@@ -1056,6 +1057,8 @@ namespace MaterialEditorAPI
         /// <param name="gameObject">The game object to retrieve projectors from.</param>
         /// <returns>An enumerable list of projectors.</returns>
         public abstract IEnumerable<Projector> GetProjectorList(object data, GameObject gameObject);
+
+        public abstract void MaterialOutput(object data, Material material, GameObject gameObject);
 
         /// <summary>
         /// Copies edits made to a material.

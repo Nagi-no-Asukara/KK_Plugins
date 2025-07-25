@@ -349,9 +349,17 @@ namespace KK_Plugins.MaterialEditor
             ObjectData objectData = (ObjectData)data;
             return MaterialEditorPlugin.GetCharaController(MakerAPI.GetCharacterControl()).GetProjectorList(objectData.ObjectType, gameObject);
         }
+         public override void MaterialOutput(object data, Material material, GameObject go)
+        {
+            Debug.LogWarning("OutputEdits");
+            ObjectData objectData = (ObjectData)data;
+            MaterialEditorPlugin.GetCharaController(MakerAPI.GetCharacterControl()).MaterialOutputEdits(objectData.Slot, objectData.ObjectType, material, go);
+        }
+
 
         public override void MaterialCopyEdits(object data, Material material, GameObject go)
         {
+            Debug.LogWarning("CopyEdits");
             ObjectData objectData = (ObjectData)data;
             MaterialEditorPlugin.GetCharaController(MakerAPI.GetCharacterControl()).MaterialCopyEdits(objectData.Slot, objectData.ObjectType, material, go);
         }

@@ -1,4 +1,5 @@
 ﻿using ExtensibleSaveFormat;
+using Newtonsoft.Json;
 using KKAPI;
 using KKAPI.Chara;
 using KKAPI.Maker;
@@ -14,6 +15,7 @@ using UniRx;
 using UnityEngine;
 using static MaterialEditorAPI.MaterialAPI;
 using static MaterialEditorAPI.MaterialEditorPluginBase;
+using KKAPI.Utilities;
 #if AI || HS2
 using AIChara;
 #endif
@@ -1588,7 +1590,7 @@ namespace KK_Plugins.MaterialEditor
             if (GetProjectorList(objectType, go).FirstOrDefault(x => x.material == material) != null)
                 foreach (var projectorProperty in ProjectorPropertyList.Where(x => x.ObjectType == objectType && x.CoordinateIndex == GetCoordinateIndex(objectType) && x.Slot == slot && x.ProjectorName == material.NameFormatted()))
                     CopyData.ProjectorPropertyList.Add(new CopyContainer.ProjectorProperty(projectorProperty.Property, float.Parse(projectorProperty.Value)));
-
+            
         }
         /// <summary>
         /// Paste any edits for the specified object
@@ -1643,6 +1645,260 @@ namespace KK_Plugins.MaterialEditor
                     SetProjectorProperty(slot, objectType, projector, projectorProperty.Property, projectorProperty.Value, go, setProperty);
                 }
         }
+
+        /// <summary> miuna
+        /// 
+        public void MaterialOutputEdits(int slot, ObjectType objectType, Material _material, GameObject go, bool setProperty = true)
+        {
+            Debug.LogWarning(slot);
+            Debug.LogWarning(_material.name);
+            SkinnedMeshRenderer[] skinnedMeshRenderers = GameObject.Find("BodyTop").transform.
+                GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+
+            if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
+                throw new Exception("No SkinnedMeshRenderers found in the scene.");
+            HashSet<Material> materials = new HashSet<Material>();
+            foreach (var skinnedMeshRenderer in skinnedMeshRenderers)
+            {
+                if (skinnedMeshRenderer == null || skinnedMeshRenderer.sharedMaterials == null)
+                    continue;
+
+                foreach (var material in skinnedMeshRenderer.sharedMaterials)
+                {
+                    if (material != null && !materials.Contains(material))
+                    {
+                        materials.Add(material);
+                        Debug.LogWarning($"GetObjectMaterials: {material.name}");
+                        //MaterialExportEdits(slot, objectType, material, go);
+                        ExportMaterial(material);
+                    }
+                }
+            }
+
+           // ExportAllMaterials();
+        }
+
+
+        public void ExportMaterial(Material material)
+        {
+            string path = Path.Combine(ExportPath, "Material");
+            // 确保存储文件的目录存在，若不存在则创建
+            Directory.CreateDirectory(path);
+            path = Path.Combine(path, $"{material.NameFormatted()}");
+            Directory.CreateDirectory(path);
+            var shaderData = new Dictionary<string, object>();
+            Debug.LogWarning($"MaterialExportEdits: Exporting material {material.NameFormatted()} to {path}");
+            foreach (var materialShader in MaterialShaderList.Where(x => x.MaterialName == material.NameFormatted()))
+            {
+                if (shaderData.ContainsKey("ShaderName"))
+                {
+                    Debug.LogWarning($"MaterialExportEdits: {materialShader.ShaderName} already exists in shaderData, skipping.");
+                    continue;
+                }
+                shaderData.Add("ShaderName", materialShader.ShaderName);
+                shaderData.Add("RenderQueue", materialShader.RenderQueue);
+            }
+
+            foreach (var materialFloatProperty in MaterialFloatPropertyList.Where(x => x.MaterialName == material.NameFormatted()))
+            {
+                if (shaderData.ContainsKey(materialFloatProperty.Property))
+                {
+                    Debug.LogWarning($"MaterialExportEdits: {materialFloatProperty.Property} already exists in shaderData, skipping.");
+                    continue;
+                }
+                shaderData.Add(materialFloatProperty.Property, materialFloatProperty.Value);
+            }
+
+            foreach (var materialKeywordProperty in MaterialKeywordPropertyList.Where(x => x.MaterialName == material.NameFormatted()))
+            {
+                if (shaderData.ContainsKey(materialKeywordProperty.Property))
+                {
+                    Debug.LogWarning($"MaterialExportEdits: {materialKeywordProperty.Property} already exists in shaderData, skipping.");
+                    continue;
+                }
+                shaderData.Add(materialKeywordProperty.Property, materialKeywordProperty.Value);
+            }
+            foreach (var materialColorProperty in MaterialColorPropertyList.Where(x => x.MaterialName == material.NameFormatted()))
+            {
+                if (shaderData.ContainsKey(materialColorProperty.Property))
+                {
+                    Debug.LogWarning($"MaterialExportEdits: {materialColorProperty.Property} already exists in shaderData, skipping.");
+                    continue;
+                }
+                shaderData.Add(materialColorProperty.Property, materialColorProperty.Value);
+            }
+            foreach (var materialTextureProperty in MaterialTexturePropertyList.Where(x => x.MaterialName == material.NameFormatted()))
+            {
+
+                if (materialTextureProperty.Offset != null)
+                {
+                    if (shaderData.ContainsKey($"{materialTextureProperty.Property}_Offset"))
+                    {
+                        Debug.LogWarning($"MaterialExportEdits: {materialTextureProperty.Property}_Offset already exists in shaderData, skipping.");
+                        continue;
+                    }
+                    shaderData.Add($"{materialTextureProperty.Property}_Offset", materialTextureProperty.Offset);
+                }
+                if (materialTextureProperty.Scale != null)
+                {
+                    if (shaderData.ContainsKey($"{materialTextureProperty.Property}_Scale"))
+                    {
+                        Debug.LogWarning($"MaterialExportEdits: {materialTextureProperty.Property}_Scale already exists in shaderData, skipping.");
+                        continue;
+                    }
+                    shaderData.Add($"{materialTextureProperty.Property}_Scale", materialTextureProperty.Scale);
+                }
+                ExportTexture(material, materialTextureProperty.Property, path);
+            }
+               // 转换为 JSON
+            string json = GenerateJson(shaderData);
+            path = Path.Combine(path, $"{material.NameFormatted()}_{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.json");
+
+            // 写入文件
+            File.WriteAllText(path, json);
+        }
+        // public void MaterialExportEdits(int slot, ObjectType objectType, Material material, GameObject go, bool setProperty = true)
+        // {
+
+        //     MaterialCopyEdits(slot, objectType, material, go);
+        //     var shaderData = new Dictionary<string, object>();
+
+        //     string path = Path.Combine(ExportPath, "Material");
+        //     // 确保存储文件的目录存在，若不存在则创建
+        //     Directory.CreateDirectory(Path.GetDirectoryName(path));
+        //     path = Path.Combine(path, $"{shaderData["ShaderName"]}");
+        //     Directory.CreateDirectory(Path.GetDirectoryName(path));
+        //     Debug.LogWarning($"击中shader数量为 : {CopyData.MaterialShaderList.Count}");
+        //     for (var i = 0; i < CopyData.MaterialShaderList.Count; i++)
+        //     {
+        //         var materialShader = CopyData.MaterialShaderList[i];
+        //         if (materialShader.ShaderName != null)
+        //             shaderData.Add("ShaderName", materialShader.ShaderName);
+        //         Debug.LogWarning($"ShaderName: {materialShader.ShaderName}");
+        //         if (materialShader.RenderQueue != null)
+        //             shaderData.Add("RenderQueue", materialShader.RenderQueue);
+        //         Debug.LogWarning($"RenderQueue: {materialShader.RenderQueue}");
+        //     }
+        //     for (var i = 0; i < CopyData.MaterialFloatPropertyList.Count; i++)
+        //     {
+        //         var materialFloatProperty = CopyData.MaterialFloatPropertyList[i];
+        //         if (material.HasProperty($"_{materialFloatProperty.Property}"))
+        //             shaderData.Add(materialFloatProperty.Property, materialFloatProperty.Value);
+        //         Debug.LogWarning($"materialFloatProperty: {materialFloatProperty.Property}:{materialFloatProperty.Value}");
+        //     }
+        //     for (var i = 0; i < CopyData.MaterialKeywordPropertyList.Count; i++)
+        //     {
+        //         var materialKeywordProperty = CopyData.MaterialKeywordPropertyList[i];
+        //         shaderData.Add(materialKeywordProperty.Property, materialKeywordProperty.Value);
+        //         Debug.LogWarning($"materialKeywordProperty: {materialKeywordProperty.Property}:{materialKeywordProperty.Value}");
+        //     }
+        //     for (var i = 0; i < CopyData.MaterialColorPropertyList.Count; i++)
+        //     {
+        //         var materialColorProperty = CopyData.MaterialColorPropertyList[i];
+        //         shaderData.Add(materialColorProperty.Property, materialColorProperty.Value);
+        //         Debug.LogWarning($"materialColorProperty: {materialColorProperty.Property}:{materialColorProperty.Value}");
+        //     }
+        //     for (var i = 0; i < CopyData.MaterialTexturePropertyList.Count; i++)
+        //     {
+        //         var materialTextureProperty = CopyData.MaterialTexturePropertyList[i];
+        //         if (material.HasProperty($"_{materialTextureProperty.Property}"))
+        //         {
+        //             //var tex = material.GetTexture($"_{materialTextureProperty.Property}");
+        //             ExportTexture(material, materialTextureProperty.Property, path);
+        //         }
+        //         Debug.LogWarning($"materialTextureProperty: {materialTextureProperty.Property}:{materialTextureProperty.Data}");
+        //         if (materialTextureProperty.Offset != null)
+        //         {
+        //             shaderData.Add($"{materialTextureProperty.Property}_Offset", materialTextureProperty.Offset);
+        //             Debug.LogWarning($"materialTextureProperty Offset: {materialTextureProperty.Offset}");
+        //         }
+        //         if (materialTextureProperty.Scale != null)
+        //         {
+        //             shaderData.Add($"{materialTextureProperty.Property}_Scale", materialTextureProperty.Scale);
+        //             Debug.LogWarning($"materialTextureProperty Scale: {materialTextureProperty.Scale}");
+        //         }
+        //     }
+        //     // 转换为 JSON
+        //     string json = GenerateJson(shaderData);
+        //     string prefix = shaderData.ContainsKey("ShaderName") ? shaderData["ShaderName"].ToString() : "MaterialExport";
+        //     path = Path.Combine(path, $"{prefix}_{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.json");
+        //     // 写入文件
+        //     File.WriteAllText(path, json);
+        // }
+
+        private string GenerateJson(Dictionary<string, object> shaderData)
+        {
+            
+            // 手动拼接 JSON 字符串
+            string json = "{\n";
+            int count = shaderData.Count;
+            int index = 0;
+            foreach (var pair in shaderData)
+            {
+                json += $"  \"{pair.Key}\": {pair.Value}";
+                if (index < count - 1)
+                    json += ",\n";
+                else
+                    json += "\n";
+                index++;
+            }
+            json += "}";
+
+            return json;
+        }
+
+        //because UI is private
+        private static void ExportTexture(Material mat, string property,string path)
+        {
+            var tex = mat.GetTexture($"_{property}");
+            if (tex == null) return;
+            var matName = mat.NameFormatted();
+            matName = string.Concat(matName.Split(Path.GetInvalidFileNameChars())).Trim();
+            string filename = Path.Combine(path, $"{matName}_{property}_{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.png");
+            Instance.ConvertNormalMap(ref tex, property, ConvertNormalmapsOnExport.Value);
+            SaveTex(tex, filename);
+            MaterialEditorPluginBase.Logger.LogInfo($"Exported {filename}");
+            //Utilities.OpenFileInExplorer(filename);
+        }
+
+        private static List<Material> ExportAllMaterials()
+        {
+            SkinnedMeshRenderer[] skinnedMeshRenderers = GameObject.Find("BodyTop").transform.
+                GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+
+            if (skinnedMeshRenderers == null || skinnedMeshRenderers.Length == 0)
+                throw new Exception("No SkinnedMeshRenderers found in the scene.");
+            HashSet<Material> materials = new HashSet<Material>();
+            foreach (var skinnedMeshRenderer in skinnedMeshRenderers)
+            {
+                if (skinnedMeshRenderer == null || skinnedMeshRenderer.sharedMaterials == null)
+                    continue;
+
+                foreach (var material in skinnedMeshRenderer.sharedMaterials)
+                {
+                    if (material != null && !materials.Contains(material))
+                    {
+                        materials.Add(material);
+                        Debug.LogWarning($"GetObjectMaterials: {material.name}");
+                    }
+                }
+            }
+            return materials.ToList();
+            // foreach (var renderer in GetRendererList(gameObject))
+            // {
+            //     Debug.LogWarning($"GetRenders: {renderer.name}");
+            //     foreach (var material in GetMaterials(gameObject, renderer))
+            //     {
+            //         materials.Add(material);
+            //         Debug.LogWarning($"GetObjectMaterials: {material.name}");
+            //     }
+            // }
+            // return materials.ToList();
+        }
+
+        //end
+
+
 
         public void MaterialCopyRemove(int slot, ObjectType objectType, Material material, GameObject go)
         {

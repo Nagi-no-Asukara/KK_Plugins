@@ -45,6 +45,7 @@ namespace MaterialEditorAPI
         public Button SelectInterpolableMaterialButton;
         public Button MaterialCopyButton;
         public Button MaterialPasteButton;
+        public Button MaterialOutputButton;
         public Button MaterialCopyRemove;
         public Button MaterialRename;
 
@@ -233,6 +234,8 @@ namespace MaterialEditorAPI
                         ShowMaterial();
                         SetLabelText(MaterialLabel, item.LabelText);
                         MaterialText.text = item.MaterialName;
+                        MaterialOutputButton.onClick.RemoveAllListeners();
+                        MaterialOutputButton.onClick.AddListener(() => item.MaterialOutput.Invoke());
                         MaterialCopyButton.onClick.RemoveAllListeners();
                         MaterialCopyButton.onClick.AddListener(() => item.MaterialOnCopy.Invoke());
                         MaterialPasteButton.onClick.RemoveAllListeners();

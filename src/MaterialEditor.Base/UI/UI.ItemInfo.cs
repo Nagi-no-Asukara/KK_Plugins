@@ -39,6 +39,7 @@ namespace MaterialEditorAPI
         public Action RendererRecalculateNormalsOnReset { get; set; }
 
         public string MaterialName { get; set; }
+        public Action MaterialOutput { get; set; }
         public Action MaterialOnCopy { get; set; }
         public Action MaterialOnPaste { get; set; }
         public Action MaterialOnCopyRemove { get; set; }

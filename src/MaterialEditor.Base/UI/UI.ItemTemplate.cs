@@ -260,6 +260,13 @@ namespace MaterialEditorAPI
                 labelMaterialLE.flexibleWidth = 1f;
                 TooltipManager.AddTooltip(labelMaterial.gameObject, "Material name");
 
+                var outputEdits = UIUtility.CreateButton($"MaterialOutput", itemPanel.transform, "OutputEdits");
+                var outputEditsLE = outputEdits.gameObject.AddComponent<LayoutElement>();
+                outputEditsLE.minWidth = MaterialButtonWidth;
+                outputEditsLE.preferredWidth = MaterialButtonWidth;
+                outputEditsLE.flexibleWidth = 0f;
+                TooltipManager.AddTooltip(outputEditsLE.gameObject, "Copy all the <b>edits</b> of this material");
+
                 var copyEdits = UIUtility.CreateButton($"MaterialCopy", itemPanel.transform, "Copy Edits");
                 var copyEditsLE = copyEdits.gameObject.AddComponent<LayoutElement>();
                 copyEditsLE.minWidth = MaterialButtonWidth;

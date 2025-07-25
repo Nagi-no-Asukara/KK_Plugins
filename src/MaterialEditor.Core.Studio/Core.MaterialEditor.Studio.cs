@@ -800,5 +800,10 @@ namespace KK_Plugins.MaterialEditor
             else
                 GetSceneController().RemoveMaterialKeywordProperty((int)data, material, propertyName);
         }
+
+        public override void MaterialOutput(object data, Material material, GameObject gameObject)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

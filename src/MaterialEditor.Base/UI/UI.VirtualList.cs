@@ -88,6 +88,7 @@ namespace MaterialEditorAPI
             listEntry.MaterialPanel = listEntry.GetUIComponent<CanvasGroup>("MaterialPanel");
             listEntry.MaterialLabel = listEntry.GetUIComponent<Text>("MaterialLabel");
             listEntry.MaterialText = listEntry.GetUIComponent<Text>("MaterialText");
+            listEntry.MaterialOutputButton = listEntry.GetUIComponent<Button>("MaterialOutput");
             listEntry.MaterialCopyButton = listEntry.GetUIComponent<Button>("MaterialCopy");
             listEntry.MaterialPasteButton = listEntry.GetUIComponent<Button>("MaterialPaste");
             listEntry.MaterialCopyRemove = listEntry.GetUIComponent<Button>("MaterialCopyRemove");
